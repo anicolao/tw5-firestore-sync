@@ -1,0 +1,8 @@
+{
+	"title": "$:/plugins/anicolao/tw5-firestore-sync",
+	"description": "A TiddlyWiki5 saver that stores data in firestore.",
+	"author": "Alex Nicolaou",
+	"version": "0.0.1",
+	"core-version": ">=5.0.8",
+	"source": "https://github.com/anicolao/tw5-firestore-sync"
+}
