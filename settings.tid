@@ -1,0 +1,4 @@
+title: $:/plugins/anicolao/tw5-firestore-sync/settings
+
+''[[Firebase Configuration|$:/FirebaseConfig]]'': (JSON)
+<div><$edit-text tiddler="$:/FirebaseConfig" default="" tag="input" class="tw-edit-texteditor fullwidth" tag="textarea"/></div>

@@ -11247,61 +11247,74 @@ class hf extends Wl {
 function initialLoadComplete() {
   return initialLoadDone;
 }
+function isConfiguration(id2) {
+  return id2 === firebaseConfigTiddler;
+}
 var makeId = function(id2) {
   return id2.replaceAll("/", "\u2215");
 };
 function registerSyncCallback(callback) {
-  const tiddlers = _h(firestore3, "tiddlers");
-  const unsub = If(Rl(tiddlers), (querySnapshot) => {
-    const changed = querySnapshot.docChanges();
-    const modifications = [];
-    const deletions = [];
-    changed.forEach((docchange) => {
-      const title = docchange.doc.data().title;
-      if (docchange.type === "removed") {
-        deletions.push(title);
-      } else {
-        modifications.push(title);
+  if (firestore3) {
+    const tiddlers = _h(firestore3, "tiddlers");
+    const unsub = If(Rl(tiddlers), (querySnapshot) => {
+      const changed = querySnapshot.docChanges();
+      const modifications = [];
+      const deletions = [];
+      changed.forEach((docchange) => {
+        const title = docchange.doc.data().title;
+        if (docchange.type === "removed") {
+          deletions.push(title);
+        } else {
+          modifications.push(title);
+        }
+      });
+      if (modifications.length > 0 || deletions.length > 0) {
+        console.log(`Tiddler update mods=${JSON.stringify(modifications)} dels=${JSON.stringify(deletions)}`);
+        callback(null, { modifications, deletions });
       }
+      initialLoadDone = true;
+    }, (err) => {
+      console.error(err);
+      alert(err);
     });
-    if (modifications.length > 0 || deletions.length > 0) {
-      console.log(`Tiddler update mods=${JSON.stringify(modifications)} dels=${JSON.stringify(deletions)}`);
-      callback(null, { modifications, deletions });
-    }
-    initialLoadDone = true;
-  });
+  }
 }
 function storeTiddler(id2, tiddlerData) {
-  if (id2) {
+  if (id2 === firebaseConfigTiddler) {
+    window.localStorage.setItem(firebaseConfigStorage, tiddlerData.text);
+    window.location.reload();
+  }
+  if (id2 && firestore3) {
     const store = gh(firestore3, `tiddlers/${makeId(id2)}`);
     return mf(store, tiddlerData);
   }
 }
 async function loadTiddler(id2, callback) {
-  if (id2) {
+  if (id2 && firestore3) {
     const store = gh(firestore3, `tiddlers/${makeId(id2)}`);
     const tiddler = await af(store);
     callback(null, tiddler.data());
   }
 }
 function deleteTiddler(id2) {
-  if (id2) {
+  if (id2 && firestore3) {
     const store = gh(firestore3, `tiddlers/${makeId(id2)}`);
     return yf(store);
   }
 }
-var firebaseConfig = {
-  apiKey: "AIzaSyAAU8G6_I93RuQsfFdOf5wwdU4Wpn3cTXk",
-  authDomain: "tiddlywiki-a94cd.firebaseapp.com",
-  projectId: "tiddlywiki-a94cd",
-  storageBucket: "tiddlywiki-a94cd.appspot.com",
-  messagingSenderId: "251419323197",
-  appId: "1:251419323197:web:0e0ee30112d98099857354"
-};
-var app5 = initializeApp(firebaseConfig);
-var firestore3 = Rh(app5, {
+var firebaseConfigTiddler = "$:/FirebaseConfig";
+var location = typeof window !== "undefined" ? window.location.href : "build-time";
+var firebaseConfigStorage = `${firebaseConfigTiddler}|${location}}`;
+var firebaseConfig = undefined;
+if (typeof window !== "undefined") {
+  const configString = window.localStorage.getItem(firebaseConfigStorage);
+  console.log(`FIREBASE: ${configString}`);
+  firebaseConfig = JSON.parse(configString);
+}
+var app5 = firebaseConfig ? initializeApp(firebaseConfig) : undefined;
+var firestore3 = app5 ? Rh(app5, {
   experimentalForceLongPolling: false
-});
+}) : undefined;
 var initialLoadDone = false;
 
 // src/firestoreadaptor.ts
@@ -11310,7 +11323,7 @@ var initialLoadDone = false;
     var self2 = this;
     self2.wiki = options.wiki;
     self2.boot = options.boot || $tw.boot;
-    self2.logger = new $tw.utils.Logger("firestore", { colour: "red" });
+    self2.logger = new $tw.utils.Logger("firestore");
   }
   FirestoreAdaptor.prototype.name = "firestore";
   FirestoreAdaptor.prototype.supportsLazyLoading = false;
@@ -11342,7 +11355,7 @@ var initialLoadDone = false;
       exclude: ["bag"]
     });
     this.logger.log(`saveTiddler ${JSON.stringify(tiddler)} with ${JSON.stringify(options)}`);
-    if (typeof window !== "undefined" && initialLoadComplete()) {
+    if (typeof window !== "undefined" && (initialLoadComplete() || isConfiguration(data.title))) {
       storeTiddler(data.title, data);
     }
     callback(null, null);
